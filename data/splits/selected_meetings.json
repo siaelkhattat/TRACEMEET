@@ -1,0 +1,11 @@
+{
+  "dev": [
+    "006b_EADH",
+    "020b_EBDZ"
+  ],
+  "test": [
+    "025b_EBDH",
+    "039b_EDDH",
+    "045b_EADH"
+  ]
+}
