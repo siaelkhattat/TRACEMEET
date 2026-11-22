@@ -7,3 +7,4 @@ soundfile
 tqdm
 pytest
 huggingface_hub
+scipy
