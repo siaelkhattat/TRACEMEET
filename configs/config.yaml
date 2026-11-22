@@ -1,0 +1,21 @@
+paths:
+  raw: data/raw
+  interim: data/interim
+  annotations: data/annotations
+  splits: data/splits
+  asr_out: outputs/asr
+  extraction_out: outputs/extraction
+  reports_out: outputs/reports
+data:
+  excerpt_minutes: 15
+asr:
+  engine: faster-whisper
+  model: small
+  language: null
+  chunk_seconds: 30
+llm:
+  model: Qwen/Qwen3-8B
+  load_in_4bit: true
+  temperature: 0.0
+  enable_thinking: false
+  max_new_tokens: 1024

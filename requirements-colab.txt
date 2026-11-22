@@ -1,0 +1,6 @@
+-r requirements.txt
+transformers
+accelerate
+bitsandbytes
+faster-whisper
+datasets
