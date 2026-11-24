@@ -10,7 +10,7 @@ data:
   excerpt_minutes: 15
 asr:
   engine: faster-whisper
-  model: small
+  model: large-v3
   language: fr
   chunk_seconds: 30
 llm:

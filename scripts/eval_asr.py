@@ -5,6 +5,8 @@ import json
 import jiwer
 import pandas as pd
 
+from tracemeet.asr import load_audio
+from tracemeet.bleed import gate_segments
 from tracemeet.config import load_config
 from tracemeet.evaluation.asr_metrics import normalize_gold, normalize_hyp
 
@@ -34,7 +36,9 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default=None)
     ap.add_argument("--split", default="dev", choices=["dev", "test", "all"])
+    ap.add_argument("--gate", type=float, default=None, help="bleed gating margin in dB")
     args = ap.parse_args()
+    tag = f"_gate{args.gate:g}" if args.gate is not None else ""
     cfg = load_config()
     model = args.model or cfg["asr"]["model"]
     sel = json.loads((cfg["paths"]["splits"] / "selected_meetings.json").read_text())
@@ -52,9 +56,14 @@ def main():
         hyp = normalize_hyp(seg_text(hyp_mix, "text"))
         rows.append({"meeting": mid, "kind": "mix", "unit": "mix",
                      "word": counts(ref, hyp, "word"), "char": counts(ref, hyp, "char")})
+        tracks_audio = None
+        if args.gate is not None:
+            tracks_audio = {k: load_audio(raw / mid / "tracks" / f"{k}.wav") for k in gold}
         for spk, segs in gold.items():
             hp = asr_root / mid / "tracks" / f"{spk}.json"
             h = json.loads(hp.read_text())["segments"]
+            if tracks_audio is not None:
+                h = gate_segments(h, spk, tracks_audio, args.gate)
             ref = normalize_gold(seg_text(segs, "transcript"))
             hyp = normalize_hyp(seg_text(h, "text"))
             rows.append({"meeting": mid, "kind": "tracks", "unit": spk,
@@ -73,8 +82,8 @@ def main():
                             "WER": rate([r], "word"), "CER": rate([r], "char")} for r in rows])
     out = cfg["paths"]["reports_out"]
     out.mkdir(parents=True, exist_ok=True)
-    df.to_csv(out / f"asr_summary_{model}_{args.split}.csv", index=False)
-    detail.to_csv(out / f"asr_detail_{model}_{args.split}.csv", index=False)
+    df.to_csv(out / f"asr_summary_{model}_{args.split}{tag}.csv", index=False)
+    detail.to_csv(out / f"asr_detail_{model}_{args.split}{tag}.csv", index=False)
     print(f"\nModel: {model} | split: {args.split}  (pooled, %)")
     print(df.to_string(index=False))
     print("\nPer track:")
