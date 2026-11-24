@@ -27,9 +27,10 @@ def load_audio(wav_path):
     return audio
 
 
-def transcribe(model, wav_path, language="fr", beam_size=5):
+def transcribe(model, wav_path, language="fr", beam_size=5, audio=None):
     t0 = time.time()
-    audio = load_audio(wav_path)
+    if audio is None:
+        audio = load_audio(wav_path)
     segments, info = model.transcribe(
         audio, language=language, beam_size=beam_size,
         vad_filter=True, condition_on_previous_text=False)

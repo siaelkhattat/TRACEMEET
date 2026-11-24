@@ -1,12 +1,14 @@
-"""WER/CER vs gold: per speaker track (System 2 input) and on the mix (baseline)."""
+"""WER/CER vs gold: per speaker track (System 2 input) and on the mix (baseline).
+
+Pooled (micro-averaged) rates. Hesitation fillers are dropped from both sides
+unless --keep-fillers is given. --tag selects a variant run, e.g. _mask3.
+"""
 import argparse
 import json
 
 import jiwer
 import pandas as pd
 
-from tracemeet.asr import load_audio
-from tracemeet.bleed import gate_segments
 from tracemeet.config import load_config
 from tracemeet.evaluation.asr_metrics import normalize_gold, normalize_hyp
 
@@ -36,15 +38,17 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default=None)
     ap.add_argument("--split", default="dev", choices=["dev", "test", "all"])
-    ap.add_argument("--gate", type=float, default=None, help="bleed gating margin in dB")
+    ap.add_argument("--tag", default="")
+    ap.add_argument("--keep-fillers", action="store_true")
     args = ap.parse_args()
-    tag = f"_gate{args.gate:g}" if args.gate is not None else ""
+    drop = not args.keep_fillers
+
     cfg = load_config()
     model = args.model or cfg["asr"]["model"]
     sel = json.loads((cfg["paths"]["splits"] / "selected_meetings.json").read_text())
     splits = ["dev", "test"] if args.split == "all" else [args.split]
     meetings = [m for s in splits for m in sel[s]]
-    asr_root = cfg["paths"]["asr_out"] / model.replace("/", "_")
+    asr_root = cfg["paths"]["asr_out"] / (model.replace("/", "_") + args.tag)
     raw = cfg["paths"]["raw"] / "summre"
 
     rows = []
@@ -52,20 +56,14 @@ def main():
         gold = json.loads((raw / mid / "gold_segments.json").read_text())
         hyp_mix = json.loads((asr_root / mid / "mix.json").read_text())["segments"]
         all_gold = [s for segs in gold.values() for s in segs]
-        ref = normalize_gold(seg_text(all_gold, "transcript"))
-        hyp = normalize_hyp(seg_text(hyp_mix, "text"))
+        ref = normalize_gold(seg_text(all_gold, "transcript"), drop)
+        hyp = normalize_hyp(seg_text(hyp_mix, "text"), drop)
         rows.append({"meeting": mid, "kind": "mix", "unit": "mix",
                      "word": counts(ref, hyp, "word"), "char": counts(ref, hyp, "char")})
-        tracks_audio = None
-        if args.gate is not None:
-            tracks_audio = {k: load_audio(raw / mid / "tracks" / f"{k}.wav") for k in gold}
         for spk, segs in gold.items():
-            hp = asr_root / mid / "tracks" / f"{spk}.json"
-            h = json.loads(hp.read_text())["segments"]
-            if tracks_audio is not None:
-                h = gate_segments(h, spk, tracks_audio, args.gate)
-            ref = normalize_gold(seg_text(segs, "transcript"))
-            hyp = normalize_hyp(seg_text(h, "text"))
+            h = json.loads((asr_root / mid / "tracks" / f"{spk}.json").read_text())["segments"]
+            ref = normalize_gold(seg_text(segs, "transcript"), drop)
+            hyp = normalize_hyp(seg_text(h, "text"), drop)
             rows.append({"meeting": mid, "kind": "tracks", "unit": spk,
                          "word": counts(ref, hyp, "word"), "char": counts(ref, hyp, "char")})
 
@@ -79,12 +77,15 @@ def main():
                       "WER_tracks": rate(trk, "word"), "CER_tracks": rate(trk, "char")})
     df = pd.DataFrame(table)
     detail = pd.DataFrame([{"meeting": r["meeting"], "kind": r["kind"], "unit": r["unit"],
+                            "ref_words": r["word"]["N"] if r["word"] else 0,
                             "WER": rate([r], "word"), "CER": rate([r], "char")} for r in rows])
+    suffix = f"{model}{args.tag}_{args.split}" + ("_keepfill" if args.keep_fillers else "")
     out = cfg["paths"]["reports_out"]
     out.mkdir(parents=True, exist_ok=True)
-    df.to_csv(out / f"asr_summary_{model}_{args.split}{tag}.csv", index=False)
-    detail.to_csv(out / f"asr_detail_{model}_{args.split}{tag}.csv", index=False)
-    print(f"\nModel: {model} | split: {args.split}  (pooled, %)")
+    df.to_csv(out / f"asr_summary_{suffix}.csv", index=False)
+    detail.to_csv(out / f"asr_detail_{suffix}.csv", index=False)
+    print(f"\nModel: {model}{args.tag} | split: {args.split} | fillers "
+          f"{'kept' if args.keep_fillers else 'dropped'}  (pooled, %)")
     print(df.to_string(index=False))
     print("\nPer track:")
     print(detail[detail.kind == "tracks"].to_string(index=False))

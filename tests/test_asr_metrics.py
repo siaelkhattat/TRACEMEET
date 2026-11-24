@@ -13,3 +13,8 @@ def test_hyp_numbers_and_punct():
 
 def test_apostrophes_match():
     assert normalize_hyp("C’est") == normalize_gold("c'est")
+
+
+def test_fillers_dropped():
+    assert normalize_gold("euh bon mh oui", drop_fillers=True) == "bon oui"
+    assert normalize_hyp("Euh, bon... hum oui", drop_fillers=True) == "bon oui"
