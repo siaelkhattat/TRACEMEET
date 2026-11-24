@@ -11,7 +11,7 @@ data:
 asr:
   engine: faster-whisper
   model: small
-  language: null
+  language: fr
   chunk_seconds: 30
 llm:
   model: Qwen/Qwen3-8B
