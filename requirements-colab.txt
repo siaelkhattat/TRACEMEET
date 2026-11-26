@@ -4,3 +4,5 @@ accelerate
 bitsandbytes
 faster-whisper
 datasets
+sentence-transformers
+scikit-learn
