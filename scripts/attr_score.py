@@ -106,6 +106,8 @@ def main():
                 rec.update(features(c, rows, tracks) if cond != "gold" else
                            {"dominance": np.nan, "avg_logprob": np.nan, "no_speech_prob": np.nan})
                 recs.append(rec)
+    if not recs:
+        raise SystemExit("No claims found: run scripts/attr_generate.py first and check its output.")
     df = pd.DataFrame(recs)
     out = cfg["paths"]["reports_out"]
     out.mkdir(parents=True, exist_ok=True)
