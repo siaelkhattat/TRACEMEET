@@ -1,4 +1,4 @@
-"""Qwen3 (4-bit) writes attributed claims, one 5-minute window at a time."""
+"""Qwen3 (4-bit) writes attributed claims, one 150-second window at a time."""
 import argparse
 import json
 import time
@@ -15,12 +15,12 @@ USER = """Voici un extrait de transcription d'une réunion en français. Chaque 
 
 {transcript}
 
-Rédige entre 4 et 6 affirmations courtes et factuelles sur ce que les participants ont dit, proposé ou décidé dans cet extrait. Chaque affirmation doit :
+Rédige entre 2 et 3 affirmations courtes et factuelles sur ce que les participants ont dit, proposé ou décidé dans cet extrait. Chaque affirmation doit :
 - nommer le locuteur concerné par son identifiant exact (par exemple S017), tel qu'il apparaît dans la transcription ;
 - indiquer le temps (en secondes) de la ligne qui la soutient ;
 - être rédigée en français.
 Réponds uniquement par un tableau JSON, sans autre texte : [{{"speaker": "S017", "time": 123, "claim": "..."}}]"""
-WINDOW_S, MAX_IN, MAX_NEW = 300.0, 7000, 700
+WINDOW_S, MAX_IN, MAX_NEW = 150.0, 4500, 400
 
 
 def main():
